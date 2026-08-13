@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>车联网威胁情报平台 V2 · 八步处理管线</title>
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --surface: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555770;
+    --border: #e0e3ea;
+    --green: #2d8f5e;
+    --green-bg: #e8f5ec;
+    --green-border: #a3d4b5;
+    --blue: #2b6cb0;
+    --blue-bg: #e6f0fa;
+    --blue-border: #93bfe0;
+    --orange: #c77d1f;
+    --orange-bg: #fdf3e3;
+    --orange-border: #e0b87a;
+    --purple: #7c3aed;
+    --purple-bg: #f0e7ff;
+    --purple-border: #c4a6f5;
+    --red: #c0392b;
+    --red-bg: #fdf2f2;
+    --red-border: #f5c6c6;
+    --gray: #5a5d72;
+    --gray-bg: #eeeff4;
+    --gray-border: #c2c4d0;
+    --code-bg: #1e1e2e;
+    --code-text: #cdd6f4;
+    --arrow: #a0a3b0;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-lg: 0 4px 20px rgba(0,0,0,0.12);
+    --radius: 12px;
+    --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .dark {
+    --bg: #0f1117;
+    --surface: #1a1d28;
+    --text: #e2e4ed;
+    --text-secondary: #9a9cb4;
+    --border: #2a2d3a;
+    --green-bg: #1a2e24;
+    --green-border: #2d5a42;
+    --blue-bg: #1a2640;
+    --blue-border: #2b5a8a;
+    --orange-bg: #2e2418;
+    --orange-border: #8a5e2b;
+    --purple-bg: #241a38;
+    --purple-border: #5a3a8a;
+    --red-bg: #2e1a1a;
+    --red-border: #5a2a2a;
+    --gray-bg: #1e2028;
+    --gray-border: #3a3d4a;
+    --code-bg: #0d0d14;
+    --code-text: #cdd6f4;
+    --arrow: #4a4d5a;
+    --shadow: 0 2px 8px rgba(0,0,0,0.3);
+    --shadow-lg: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    transition: background var(--transition), color var(--transition);
+  }
+  .header {
+    background: linear-gradient(135deg, #1a3c2b 0%, #2d5a42 100%);
+    color: #fff;
+    padding: 40px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .dark .header { background: linear-gradient(135deg, #0d1a14 0%, #1a2e24 100%); }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at 30% 50%, rgba(45,143,94,0.15) 0%, transparent 50%),
+                radial-gradient(circle at 70% 50%, rgba(124,58,237,0.15) 0%, transparent 50%);
+    animation: headerPulse 8s ease-in-out infinite;
+  }
+  @keyframes headerPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  .header h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; position: relative; z-index: 1; }
+  .header p { font-size: 1rem; opacity: 0.85; margin-top: 8px; position: relative; z-index: 1; }
+  .controls {
+    display: flex; justify-content: center; gap: 16px; padding: 16px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow);
+    transition: background var(--transition), border-color var(--transition);
+  }
+  .toggle-btn {
+    padding: 8px 20px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--text); cursor: pointer;
+    font-size: 0.9rem; font-weight: 500; transition: all var(--transition);
+  }
+  .toggle-btn:hover { border-color: var(--green); color: var(--green); }
+  .legend {
+    display: flex; justify-content: center; flex-wrap: wrap; gap: 20px;
+    padding: 20px; background: var(--surface); border-bottom: 1px solid var(--border);
+    transition: background var(--transition);
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary); }
+  .legend-dot { width: 14px; height: 14px; border-radius: 50%; }
+  .pipeline-container { max-width: 1000px; margin: 0 auto; padding: 40px 24px; }
+  .pipeline-flow { display: flex; flex-direction: column; align-items: center; gap: 0; }
+  .arrow-connector {
+    display: flex; flex-direction: column; align-items: center; padding: 8px 0;
+    color: var(--arrow); font-size: 1.5rem; position: relative; height: 50px;
+  }
+  .arrow-connector::before {
+    content: ''; width: 2px; height: 20px; background: var(--arrow); opacity: 0.5;
+  }
+  .arrow-connector::after {
+    content: ''; width: 0; height: 0;
+    border-left: 8px solid transparent; border-right: 8px solid transparent;
+    border-top: 10px solid var(--arrow); opacity: 0.6;
+  }
+  .node-card {
+    width: 100%; max-width: 900px; background: var(--surface); border-radius: var(--radius);
+    box-shadow: var(--shadow); border-left: 5px solid var(--gray); cursor: pointer;
+    transition: all var(--transition); position: relative; overflow: hidden;
+  }
+  .node-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+  .node-card.green { border-left-color: var(--green); }
+  .node-card.blue { border-left-color: var(--blue); }
+  .node-card.orange { border-left-color: var(--orange); }
+  .node-card.purple { border-left-color: var(--purple); }
+  .node-card.red { border-left-color: var(--red); }
+  .node-card.gray { border-left-color: var(--gray); }
+  .card-header { padding: 20px 24px; display: flex; align-items: flex-start; gap: 16px; }
+  .step-number {
+    min-width: 36px; height: 36px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; font-weight: 700;
+    font-size: 0.9rem; color: #fff; flex-shrink: 0;
+  }
+  .green .step-number { background: var(--green); }
+  .blue .step-number { background: var(--blue); }
+  .orange .step-number { background: var(--orange); }
+  .purple .step-number { background: var(--purple); }
+  .red .step-number { background: var(--red); }
+  .gray .step-number { background: var(--gray); }
+  .card-title-area { flex: 1; }
+  .card-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 2px; }
+  .card-file {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.8rem; color: var(--text-secondary); background: var(--gray-bg);
+    padding: 2px 8px; border-radius: 4px; display: inline-block; margin-top: 4px;
+  }
+  .card-desc { font-size: 0.92rem; color: var(--text-secondary); margin-top: 6px; }
+  .expand-indicator {
+    font-size: 1.2rem; color: var(--text-secondary); transition: transform var(--transition);
+    flex-shrink: 0; margin-top: 4px;
+  }
+  .node-card.expanded .expand-indicator { transform: rotate(180deg); }
+  .card-details {
+    max-height: 0; overflow: hidden; transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .node-card.expanded .card-details { max-height: 6000px; }
+  .details-inner { padding: 0 24px 24px; border-top: 1px solid var(--border); }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  @media (max-width: 700px) { .detail-grid { grid-template-columns: 1fr; } }
+  .detail-block h4 {
+    font-size: 0.85rem; font-weight: 600;
+    color: var(--text-secondary); margin-bottom: 8px;
+  }
+  .detail-block p, .detail-block ul { font-size: 0.9rem; color: var(--text); }
+  .detail-block ul { padding-left: 18px; }
+  .detail-block li { margin-bottom: 4px; }
+  .tag {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 0.78rem; font-weight: 500; margin: 2px 4px 2px 0;
+  }
+  .green .tag { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .blue .tag { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+  .orange .tag { background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange-border); }
+  .purple .tag { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border); }
+  .red .tag { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+  .gray .tag { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-border); }
+  .core-badge {
+    display: inline-block; background: var(--orange); color: #fff;
+    padding: 2px 10px; border-radius: 10px; font-size: 0.7rem;
+    font-weight: 700; letter-spacing: 0.5px; margin-left: 8px; vertical-align: middle;
+  }
+  .filter-badge {
+    display: inline-block; background: var(--red); color: #fff;
+    padding: 2px 10px; border-radius: 10px; font-size: 0.7rem;
+    font-weight: 700; letter-spacing: 0.5px; margin-left: 8px; vertical-align: middle;
+  }
+  .code-block {
+    background: var(--code-bg); color: var(--code-text); border-radius: 8px;
+    padding: 20px; margin-top: 12px; overflow-x: auto;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.82rem; line-height: 1.7; white-space: pre-wrap; word-break: break-word;
+  }
+  .section-toggle {
+    width: 100%; text-align: left; padding: 12px 16px; background: var(--gray-bg);
+    border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+    cursor: pointer; font-size: 0.9rem; font-weight: 600; margin-top: 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    transition: all var(--transition);
+  }
+  .section-toggle:hover { border-color: var(--blue); }
+  .section-toggle .arrow { transition: transform var(--transition); }
+  .section-toggle.active .arrow { transform: rotate(180deg); }
+  .section-content { max-height: 0; overflow: hidden; transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+  .section-content.open { max-height: 8000px; }
+  .formula-box {
+    background: var(--orange-bg); border: 1px solid var(--orange-border);
+    border-radius: 8px; padding: 20px; margin-top: 12px;
+    font-size: 0.9rem; line-height: 2;
+  }
+  .formula-box code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    background: var(--code-bg); color: var(--code-text);
+    padding: 2px 6px; border-radius: 4px; font-size: 0.82rem;
+  }
+  .weight-bar {
+    display: flex; height: 32px; border-radius: 6px; overflow: hidden;
+    margin: 12px 0; background: var(--gray-bg);
+  }
+  .weight-segment {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 600; color: #fff;
+  }
+  .tier-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.85rem; }
+  .tier-table th, .tier-table td { padding: 8px 12px; border: 1px solid var(--border); text-align: left; }
+  .tier-table th { background: var(--gray-bg); font-weight: 600; }
+  .footer {
+    text-align: center; padding: 32px; color: var(--text-secondary);
+    font-size: 0.85rem; border-top: 1px solid var(--border); margin-top: 40px;
+  }
+  .json-key { color: #89b4fa; }
+  .json-string { color: #a6e3a1; }
+  .json-type { color: #f9e2af; }
+  .json-bracket { color: #cdd6f4; }
+  .json-comment { color: #6c7086; font-style: italic; }
+  .decision-box {
+    background: var(--orange-bg); border: 1px solid var(--orange-border);
+    border-radius: 8px; padding: 16px; margin-top: 12px;
+  }
+  .decision-box h4 { margin-bottom: 8px; }
+  .rule-item { padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .rule-item:last-child { border-bottom: none; }
+  .rule-label { font-weight: 600; color: var(--orange); }
+  .flow-diagram {
+    background: var(--gray-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px; margin-top: 12px;
+    font-size: 0.88rem; line-height: 2;
+  }
+  .flow-diagram strong { color: var(--orange); }
+  code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    background: var(--gray-bg); color: var(--text);
+    padding: 1px 6px; border-radius: 4px; font-size: 0.82rem;
+  }
+  .type-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px; transition: all var(--transition);
+  }
+  .type-card:hover { border-color: var(--blue); transform: translateY(-2px); }
+  .platform-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  }
+  @media (max-width: 700px) { .platform-grid { grid-template-columns: repeat(2, 1fr); } }
+  .platform-item {
+    text-align: center; background: var(--gray-bg); border-radius: 8px;
+    padding: 12px; font-size: 0.8rem; border: 1px solid var(--border);
+  }
+  .component-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  }
+  @media (max-width: 700px) { .component-grid { grid-template-columns: 1fr; } }
+  .component-item {
+    background: var(--gray-bg); border-radius: 8px; padding: 10px;
+    font-size: 0.8rem; border: 1px solid var(--border);
+  }
+  .principle-bar {
+    display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;
+    padding: 16px; background: var(--surface); border-radius: 12px;
+    box-shadow: var(--shadow); margin-top: 24px;
+  }
+
+  .mosaic {
+    position: relative;
+    filter: blur(8px);
+    user-select: none;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .mosaic::after {
+    content: '【出于信息安全需要，具体评分标准已脱敏】';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--orange);
+    background: var(--orange-bg);
+    border: 1px solid var(--orange-border);
+    padding: 8px 16px;
+    border-radius: 8px;
+    white-space: nowrap;
+    filter: none;
+    pointer-events: auto;
+    z-index: 10;
+  }
+  .mosaic-inline {
+    display: inline-block;
+    filter: blur(6px);
+    user-select: none;
+    background: var(--gray-bg);
+    border-radius: 4px;
+    padding: 2px 8px;
+    color: transparent;
+  }
+  .security-note {
+    background: var(--orange-bg);
+    border: 1px solid var(--orange-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    color: var(--orange);
+    font-weight: 600;
+    margin: 8px 0;
+    text-align: center;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🛡️ 车联网威胁情报平台 V2</h1>
+  <p>某新能源车企 · 八步标准化处理管线</p>
+</div>
+
+<div class="controls">
+  <button class="toggle-btn" id="expandAllBtn">全部展开</button>
+  <button class="toggle-btn" id="collapseAllBtn">全部收起</button>
+  <button class="toggle-btn" id="themeBtn">切换暗色模式</button>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>输入/处理</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>过滤/决策</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>分类/识别</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>分析/评分</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>输出</div>
+</div>
+
+<div class="pipeline-container">
+<div class="pipeline-flow">
+
+  <!-- NODE 1: 情报输入 -->
+  <div class="node-card green" onclick="toggleCard(this)">
+    <div class="card-header">
+      <div class="step-number">1</div>
+      <div class="card-title-area">
+        <div class="card-title">情报输入</div>
+        <div class="card-file">normalize.py</div>
+        <div class="card-desc">接收多源情报输入，统一标准化为平台内部格式，兜底提取CVE编号</div>
+      </div>
+      <div class="expand-indicator">&#9660;</div>
+    </div>
+    <div class="card-details">
+      <div class="details-inner">
+        <div class="detail-grid">
+          <div class="detail-block">
+            <h4>📥 输入来源</h4>
+            <ul>
+              <li>RSS 安全订阅源</li>
+              <li>企业微信 Webhook</li>
+              <li>OpenCTI 已有情报</li>
+              <li>定向爬虫采集</li>
+              <li>人工上报 / 邮件</li>
+            </ul>
+          </div>
+          <div class="detail-block">
+            <h4>📤 标准化输出</h4>
+            <ul>
+              <li><code>title</code> 情报标题</li>
+              <li><code>content</code> 正文内容</li>
+              <li><code>source_type</code> 来源类型</li>
+              <li><code>metadata</code> 元数据</li>
+              <li><code>preliminary_cves</code> 兜底CVE列表</li>
+            </ul>
+          </div>
+          <div class="detail-block">
+            <h4>核心逻辑</h4>
+            <ul>
+              <li>按来源类型映射字段（RSS取<code>title</code>/<code>description</code>，Webhook取<code>headline</code>/<code>body</code>等）</li>
+              <li>统一提取 <code>url</code>、<code>author</code>、<code>pub_date</code>、<code>keywords</code></li>
+              <li>兜底机制：标准化后标题和正文都为空时，遍历原始输入提取任意有效文本</li>
+              <li>从参考链接URL中正则提取CVE编号，存入 <code>preliminary_cves</code></li>
+            </ul>
+          </div>
+          <div class="detail-block">
+            <h4>支持的来源类型</h4>
+            <div>
+              <span class="tag">RSS订阅</span>
+              <span class="tag">企微Webhook</span>
+              <span class="tag">OpenCTI</span>
+              <span class="tag">爬虫</span>
+              <span class="tag">通用兜底</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="section-toggle" onclick="toggleSection(event, this)">
+          查看字段映射规则
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="section-content">
+          <div class="security-note">【出于信息安全需要，具体关键词内容不展示】</div>
+          <div class="code-block"><span style="color:#89b4fa;font-weight:600;">【RSS 来源映射】</span>
+<span style="color:#cdd6f4;">title     ← raw["title"]
+content   ← raw["description"] 或 raw["content"]
+url       ← raw["link"]
+published ← raw["published"]
+feed_name ← raw["feed_name"]</span>
+
+<span style="color:#89b4fa;font-weight:600;">【企微 Webhook 来源映射】</span>
+<span style="color:#cdd6f4;">title       ← raw["title"] 或 raw["headline"]
+content     ← raw["content"] 或 raw["body"] 或 raw["description"]
+url         ← raw["url"] 或 raw["link"]
+source      ← raw["source"] 或 raw["platform"]
+received_at ← raw["received_at"]</span>
+
+<span style="color:#89b4fa;font-weight:600;">【OpenCTI 来源映射】</span>
+<span style="color:#cdd6f4;">title       ← raw["name"] 或 raw["title"]
+content     ← raw["description"]
+opencti_id  ← raw["id"]
+published   ← raw["published"]</span>
+
+<span style="color:#89b4fa;font-weight:600;">【爬虫来源映射】</span>
+<span style="color:#cdd6f4;">title      ← raw["title"]
+content    ← raw["content"] 或 raw["description"]
+platform   ← raw["site_name"]
+user_nick  ← raw["user_nick"]
+url        ← raw["url"]</span>
+
+<span style="color:#89b4fa;font-weight:600;">【CVE 兜底提取规则】</span>
+<span style="color:#cdd6f4;">从以下位置正则提取 CVE-XXXX-XXXXX 模式：
+  1. raw["url"] / raw["link"] / raw["source_url"]
+  2. raw["references"] / raw["reference_links"]（列表）
+  3. content 正文内嵌的 URL（正则 https?://...）
+提取后存入 preliminary_cves，作为大模型漏抽CVE的兜底</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-connector"></div>
+
+  <!-- NODE 2: 判断误报 & 去除噪音 -->
+  <div class="node-card red" onclick="toggleCard(this)">
+    <div class="card-header">
+      <div class="step-number">2</div>
+      <div class="card-title-area">
+        <div class="card-title">判断误报 & 去除噪音 <span class="filter-badge">过滤网关</span></div>
+        <div class="card-file">competitor_gate.py</div>
+        <div class="card-desc">基于关键词规则预筛，过滤纯商业噪音，节省下游处理成本</div>
+      </div>
+      <div class="expand-indicator">&#9660;</div>
+    </div>
+    <div class="card-details">
+      <div class="details-inner">
+        <div class="detail-grid">
+          <div class="detail-block">
+            <h4>🚫 直接丢弃（噪音）</h4>
+            <ul>
+              <li>纯友商商业新闻（售价/试驾/交付/销量/上市/发布会/评测）</li>
+              <li>无安全属性的行业资讯、营销活动</li>
+              <li>未命中核心资产且仅涉及通用技术词</li>
+              <li>友商 + 无负面安全词 + 无某新能源车企核心</li>
+            </ul>
+          </div>
+          <div class="detail-block">
+            <h4>✅ 放行进入下游</h4>
+            <ul>
+              <li>命中某新能源车企核心资产（品牌/车型/组件）</li>
+              <li>友商 + 负面安全词（漏洞/0day/攻击/泄露/诉讼/处罚）</li>
+              <li>带CVE编号的漏洞通告（即使未命中核心资产）</li>
+              <li>车机故障/破解/ADB/root/死机等攻击面情报</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="detail-block" style="margin-top:12px">
+          <h4>友商负面词清单（触发放行）</h4>
+          <div>
+            <span class="tag">漏洞</span>
+            <span class="tag">安全漏洞</span>
+            <span class="tag">0day</span>
+            <span class="tag">后门</span>
+            <span class="tag">提权</span>
+            <span class="tag">越狱</span>
+            <span class="tag">刷机</span>
+            <span class="tag">破解</span>
+            <span class="tag">root</span>
+            <span class="tag">诉讼</span>
+            <span class="tag">处罚</span>
+            <span class="tag">数据泄露</span>
+            <span class="tag">网络攻击</span>
+          </div>
+        </div>
+
+        <div class="detail-block" style="margin-top:12px">
+          <h4>友商业务噪音词（触发丢弃）</h4>
+          <div>
+            <span class="tag">停产</span>
+            <span class="tag">售价</span>
+            <span class="tag">试驾</span>
+            <span class="tag">交付</span>
+            <span class="tag">销量</span>
+            <span class="tag">上市</span>
+            <span class="tag">发布会</span>
+            <span class="tag">评测</span>
+            <span class="tag">续航测试</span>
+          </div>
+        </div>
+
+        <div class="flow-diagram">
+          <strong>流程示意：</strong><br>
+          命中友商？→ 否 → 透明放行<br>
+          命中友商？→ 是 → 命中负面词？→ 是 → <strong>放行进入下游（打「友商」标签）</strong><br>
+          命中友商？→ 是 → 命中负面词？→ 否 → 有某新能源车企核心？→ 是 → 透明放行<br>
+          命中友商？→ 是 → 命中负面词？→ 否 → 有某新能源车企核心？→ 否 → <strong>标记 irrelevant，跳过后续分析</strong>
+        </div>
+
+        <button class="section-toggle" onclick="toggleSection(event, this)">
+          查看完整判定规则
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="section-content">
+          <div class="security-note">【出于信息安全需要，具体关键词内容不展示】</div>
+          <div class="code-block mosaic"><span style="color:#89b4fa;font-weight:600;">【友商负面词 COMPETITOR_NEGATIVE_KEYWORDS】</span>
+<span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span>
+
+<span style="color:#89b4fa;font-weight:600;">【友商业务噪音词 COMPETITOR_NOISE_KEYWORDS】</span>
+<span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span>
+
+<span style="color:#89b4fa;font-weight:600;">【友商品牌清单 COMPETITOR_BRANDS】</span>
+<span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span>
+
+<span style="color:#89b4fa;font-weight:600;">【判定伪代码】</span>
+<span style="color:#cdd6f4;">if not has_competitor:
+    competitor_relevant = False
+    return  # 透明放行
+
+if has_negative(text):
+    competitor_relevant = True
+    return  # 放行进入下游
+
+if has_core:
+    competitor_relevant = False
+    return  # 含某新能源车企核心，走某新能源车企原有逻辑
+
+# 纯友商无负面+无某新能源车企核心
+llm_result = {"content_type": "irrelevant"}
+final_score = 0
+if has_noise(text):
+    print("友商业务噪音, 跳过")
+else:
+    print("友商命中但无负面词, 跳过")</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-connector"></div>
+
+  <!-- NODE 3: 判断情报类型 -->
+  <div class="node-card blue" onclick="toggleCard(this)">
+    <div class="card-header">
+      <div class="step-number">3</div>
+      <div class="card-title-area">
+        <div class="card-title">判断情报类型 <span class="core-badge">LLM分类</span></div>
+        <div class="card-file">llm_core.py → content_type</div>
+        <div class="card-desc">大模型基于原文内容，将情报归入四大类型之一</div>
+      </div>
+      <div class="expand-indicator">&#9660;</div>
+    </div>
+    <div class="card-details">
+      <div class="details-inner">
+        <div class="detail-grid">
+          <div class="type-card" style="border-color:var(--red-border);background:var(--red-bg);">
+            <div style="font-size:0.95rem;font-weight:700;color:var(--red);margin-bottom:6px;">🔴 公开漏洞</div>
+            <div style="font-size:0.85rem;color:var(--text);line-height:1.7;">
+              含CVE编号的漏洞披露、安全公告、补丁通告、PoC/武器化利用情报、0day披露
+            </div>
+          </div>
+          <div class="type-card" style="border-color:var(--purple-border);background:var(--purple-bg);">
+            <div style="font-size:0.95rem;font-weight:700;color:var(--purple);margin-bottom:6px;">🟣 数据泄露</div>
+            <div style="font-size:0.85rem;color:var(--text);line-height:1.7;">
+              用户数据/车主信息泄露、内部代码/设计图纸外泄、数据库暴露、暗网售卖
+            </div>
+          </div>
+          <div class="type-card" style="border-color:var(--orange-border);background:var(--orange-bg);">
+            <div style="font-size:0.95rem;font-weight:700;color:var(--orange);margin-bottom:6px;">🟡 政府监管</div>
+            <div style="font-size:0.85rem;color:var(--text);line-height:1.7;">
+              工信部通报、网信办处罚、市场监管、召回公告、合规检查、行政处罚
+            </div>
+          </div>
+          <div class="type-card" style="border-color:var(--green-border);background:var(--green-bg);">
+            <div style="font-size:0.95rem;font-weight:700;color:var(--green);margin-bottom:6px;">🟢 舆情情报</div>
+            <div style="font-size:0.85rem;color:var(--text);line-height:1.7;">
+              社交媒体讨论、车主投诉、车机故障/黑屏/死机、破解刷机、负面口碑、可靠性问题
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-block" style="margin-top:16px">
+          <h4>分类互斥原则</h4>
+          <p>每条情报仅归属一个类型。大模型输出 <code>content_type</code> + <code>classification_confidence</code>（置信度 0.0~1.0）。若置信度 &lt; 0.6，标记为待人工复核。</p>
+        </div>
+
+        <button class="section-toggle" onclick="toggleSection(event, this)">
+          查看大模型分类 Prompt 规则
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="section-content">
+          <div class="security-note">【出于信息安全需要，具体关键词内容不展示】</div>
+          <div class="code-block"><span style="color:#89b4fa;font-weight:600;">【任务】</span>
+<span style="color:#cdd6f4;">分析输入情报，判断其属于以下四类中的哪一类：
+
+1. <strong>公开漏洞</strong>：含CVE编号、安全公告、补丁、PoC、武器化利用
+2. <strong>数据泄露</strong>：用户数据/车主信息/内部代码/设计图纸泄露
+3. <strong>政府监管</strong>：工信部通报、网信办处罚、召回、合规检查
+4. <strong>舆情情报</strong>：社交媒体讨论、车主投诉、车机故障、破解刷机
+
+输出字段：
+  content_type: "vulnerability" | "data_leak" | "regulatory" | "public_opinion"
+  classification_confidence: 0.0~1.0
+
+注意：
+  - 商业/财经/政策新闻顺带提及某新能源车企，未涉及安全问题 → 回退到 irrelevant
+  - 带CVE编号的漏洞通告即使未命中核心资产 → 必须判为 vulnerability
+  - 车机非白名单应用安装、刷机、ADB、root → 属攻击面，判 vulnerability 或 public_opinion</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-connector"></div>
+
+  <!-- NODE 4: 来源平台识别 -->
+  <div class="node-card blue" onclick="toggleCard(this)">
+    <div class="card-header">
+      <div class="step-number">4</div>
+      <div class="card-title-area">
+        <div class="card-title">来源平台识别</div>
+        <div class="card-file">llm_core.py → source_platform</div>
+        <div class="card-desc">识别情报原始发布平台，用于可信度评估与标签标记</div>
+      </div>
+      <div class="expand-indicator">&#9660;</div>
+    </div>
+    <div class="card-details">
+      <div class="details-inner">
+        <div class="platform-grid">
+          <div class="platform-item">
+            <div style="font-size:1.4rem;margin-bottom:4px;">📱</div>
+            <div style="font-weight:600;color:var(--text);">Douyin</div>
+            <div style="color:var(--text-secondary);font-size:0.75rem;">抖音</div>
+          </div>
+          <div class="platform-item">
+            <div style="font-size:1.4rem;margin-bottom:4px;">🐦</div>
+            <div style="font-weight:600;color:var(--text);">Weibo</div>
+            <div style="color:var(--text-secondary);font-size:0.75rem;">微博</div>
+          </div>
+          <div class="platform-item">
+            <div style="font-size:1.4rem;margin-bottom:4px;">📕</div>
+            <div style="font-weight:600;color:var(--text);">Xiaohongshu</div>
+            <div style="color:var(--text-secondary);font-size:0.75rem;">小红书</div>
+          </div>
+          <div class="platform-item">
+            <div style="font-size:1.4rem;margin-bottom:4px;">📰</div>
+            <div style="font-weight:600;color:var(--text);">RSS</div>
+            <div style="color:var(--text-secondary);font-size:0.75rem;">订阅源</div>
+          </div>
+          <div class="platform-item">
+            <div style="font-size:1.4rem;margin-bottom:4px;">🛡️</div>
+            <div style="font-weight:600;color:var(--text);">Security Forum</div>
+            <div style="color:var(--text-secondary);font-size:0.75rem;">安全社区</div>
+          </div>
+          <div class="platform-item">
+            <div style="font-size:1.4rem;margin-bottom:4px;">🏛️</div>
+            <div style="font-weight:600;color:var(--text);">NVD / 官方</div>
+            <div style="color:var(--text-secondary);font-size:0.75rem;">漏洞库</div>
+          </div>
+          <div class="platform-item">
+            <div style="font-size:1.4rem;margin-bottom:4px;">💬</div>
+            <div style="font-weight:600;color:var(--text);">Webhook</div>
+            <div style="color:var(--text-secondary);font-size:0.75rem;">企微推送</div>
+          </div>
+          <div class="platform-item">
+            <div style="font-size:1.4rem;margin-bottom:4px;">❓</div>
+            <div style="font-weight:600;color:var(--text);">Other / Null</div>
+            <div style="color:var(--text-secondary);font-size:0.75rem;">其他/未知</div>
+          </div>
+        </div>
+
+        <div class="detail-block" style="margin-top:16px">
+          <h4>可信度映射（直接影响评分）</h4>
+          <div class="mosaic" style="border-radius:8px;">
+          <div class="mosaic"><table class="tier-table">
+            <tr><th>来源等级</th><th>平台示例</th><th>可信度分值</th></tr>
+            <tr><td>高</td><td>CNVD / CNCERT / 国家机构 / 官方漏洞库</td><td><span class="mosaic-inline">***</span></td></tr>
+            <tr><td>较高</td><td>知名安全社区 / 厂商官方公告</td><td><span class="mosaic-inline">***</span></td></tr>
+            <tr><td>中</td><td>知名厂商 / 开源社区公告</td><td><span class="mosaic-inline">***</span></td></tr>
+            <tr><td>较低</td><td>一般资讯站 / 自媒体</td><td><span class="mosaic-inline">***</span></td></tr>
+            <tr><td>低</td><td>个人博客 / 未知来源</td><td><span class="mosaic-inline">***</span></td></tr>
+          </table></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-connector"></div>
+
+  <!-- NODE 5: 受影响端判断 -->
+  <div class="node-card purple" onclick="toggleCard(this)">
+    <div class="card-header">
+      <div class="step-number">5</div>
+      <div class="card-title-area">
+        <div class="card-title">受影响端判断</div>
+        <div class="card-file">llm_core.py → affected_ends</div>
+        <div class="card-desc">判定情报影响的车辆系统边界，确定响应责任域</div>
+      </div>
+      <div class="expand-indicator">&#9660;</div>
+    </div>
+    <div class="card-details">
+      <div class="details-inner">
+        <div class="detail-grid">
+          <div class="type-card" style="border-color:var(--green-border);background:var(--green-bg);">
+            <div style="font-size:0.95rem;font-weight:700;color:var(--green);margin-bottom:6px;">🚗 整车</div>
+            <div style="font-size:0.85rem;color:var(--text);line-height:1.7;">
+              <span class="mosaic-inline">• 涉及车辆物理安全或全车系统</span><br>
+              <span class="mosaic-inline">• 刹车/转向/动力/车身控制</span><br>
+              <span class="mosaic-inline">• 功能安全相关（ISO 26262）</span><br>
+              <span class="mosaic-inline">• 召回级别事件</span>
+            </div>
+          </div>
+          <div class="type-card" style="border-color:var(--blue-border);background:var(--blue-bg);">
+            <div style="font-size:0.95rem;font-weight:700;color:var(--blue);margin-bottom:6px;">☁️ 网联平台 / TSP</div>
+            <div style="font-size:0.85rem;color:var(--text);line-height:1.7;">
+              <span class="mosaic-inline">• 云端服务/车联网平台</span><br>
+              <span class="mosaic-inline">• TSP后台/OTA服务器</span><br>
+              <span class="mosaic-inline">• 远程诊断/数据上传通道</span><br>
+              <span class="mosaic-inline">• 企业IT基础设施</span>
+            </div>
+          </div>
+          <div class="type-card" style="border-color:var(--green-border);background:var(--green-bg);">
+            <div style="font-size:0.95rem;font-weight:700;color:var(--green);margin-bottom:6px;">📱 控车 APP</div>
+            <div style="font-size:0.85rem;color:var(--text);line-height:1.7;">
+              <span class="mosaic-inline">• 某新能源车企官方APP/小程序</span><br>
+              <span class="mosaic-inline">• 钥匙管理/远程控车</span><br>
+              <span class="mosaic-inline">• 用户账户/权限系统</span><br>
+              <span class="mosaic-inline">• 第三方合作APP</span>
+            </div>
+          </div>
+          <div class="type-card" style="border-color:var(--orange-border);background:var(--orange-bg);">
+            <div style="font-size:0.95rem;font-weight:700;color:var(--orange);margin-bottom:6px;">⚡ 充电桩 / 能源</div>
+            <div style="font-size:0.85rem;color:var(--text);line-height:1.7;">
+              <span class="mosaic-inline">• 家用充电桩/公共快充桩</span><br>
+              <span class="mosaic-inline">• 充电协议/支付系统</span><br>
+              <span class="mosaic-inline">• V2G/V2L相关</span><br>
+              <span class="mosaic-inline">• 电池管理系统(BMS)接口</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-block" style="margin-top:16px">
+          <h4>命名归一化</h4>
+          <p>大模型输出统一为 <code>"整车"</code> / <code>"网联平台"</code> / <code>"控车APP"</code> / <code>"充电桩"</code>，避免 "车机IVI"、"云端服务" 等表述不一致问题。下游节点直接按标准值匹配。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-connector"></div>
+
+  <!-- NODE 6: 零部件判断 -->
+  <div class="node-card purple" onclick="toggleCard(this)">
+    <div class="card-header">
+      <div class="step-number">6</div>
+      <div class="card-title-area">
+        <div class="card-title">零部件判断 <span class="core-badge">实体提取</span></div>
+        <div class="card-file">entity_match.py + llm_core.py → entities</div>
+        <div class="card-desc">从情报中提取涉及的硬件/软件零部件，结合预匹配关键词体系</div>
+      </div>
+      <div class="expand-indicator">&#9660;</div>
+    </div>
+    <div class="card-details">
+      <div class="details-inner">
+        <div class="component-grid">
+          <div class="component-item">
+            <div style="font-weight:600;color:var(--text);margin-bottom:4px;">📡 通信模块</div>
+            <div style="color:var(--text-secondary);font-size:0.78rem;"><span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span></div>
+          </div>
+          <div class="component-item">
+            <div style="font-weight:600;color:var(--text);margin-bottom:4px;">🖥️ 座舱系统</div>
+            <div style="color:var(--text-secondary);font-size:0.78rem;"><span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span></div>
+          </div>
+          <div class="component-item">
+            <div style="font-weight:600;color:var(--text);margin-bottom:4px;">🔌 总线协议</div>
+            <div style="color:var(--text-secondary);font-size:0.78rem;"><span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span></div>
+          </div>
+          <div class="component-item">
+            <div style="font-weight:600;color:var(--text);margin-bottom:4px;">🤖 智驾系统</div>
+            <div style="color:var(--text-secondary);font-size:0.78rem;"><span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span></div>
+          </div>
+          <div class="component-item">
+            <div style="font-weight:600;color:var(--text);margin-bottom:4px;">☁️ OTA/TSP</div>
+            <div style="color:var(--text-secondary);font-size:0.78rem;"><span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span></div>
+          </div>
+          <div class="component-item">
+            <div style="font-weight:600;color:var(--text);margin-bottom:4px;">📦 基础软件</div>
+            <div style="color:var(--text-secondary);font-size:0.78rem;"><span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span></div>
+          </div>
+          <div class="component-item">
+            <div style="font-weight:600;color:var(--text);margin-bottom:4px;">🧩 芯片平台</div>
+            <div style="color:var(--text-secondary);font-size:0.78rem;"><span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span></div>
+          </div>
+          <div class="component-item">
+            <div style="font-weight:600;color:var(--text);margin-bottom:4px;">🌐 服务端</div>
+            <div style="color:var(--text-secondary);font-size:0.78rem;"><span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span></div>
+          </div>
+          <div class="component-item">
+            <div style="font-weight:600;color:var(--text);margin-bottom:4px;">🔧 诊断/安全</div>
+            <div style="color:var(--text-secondary);font-size:0.78rem;"><span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span></div>
+          </div>
+        </div>
+
+        <div class="detail-block" style="margin-top:16px">
+          <h4>智能匹配策略</h4>
+          <ul>
+            <li><strong>中文关键词：</strong>子串匹配（误匹配率极低）</li>
+            <li><strong>英文关键词：</strong>ASCII边界匹配（防"车型H车型I"误匹配）</li>
+            <li><strong>短关键词（≤3字符）：</strong>用边界匹配</li>
+            <li><strong>长关键词：</strong>用子串匹配（兼容版本号如 openssl3.0.0）</li>
+          </ul>
+        </div>
+
+        <button class="section-toggle" onclick="toggleSection(event, this)">
+          查看完整关键词清单 <span style="font-size:0.75rem;color:var(--orange);margin-left:8px;">【出于信息安全需要，具体关键词内容已脱敏】</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="section-content">
+          <div class="security-note">【出于信息安全需要，具体关键词内容不展示】</div>
+          <div class="code-block mosaic"><span style="color:#89b4fa;font-weight:600;">【主体关键词 SUBJECT_KEYWORDS（优先级：core）】</span>
+<span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span>
+
+<span style="color:#89b4fa;font-weight:600;">【车型 VEHICLE_MODELS（优先级：core）】</span>
+<span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span>
+
+<span style="color:#89b4fa;font-weight:600;">【威胁词 THREAT_KEYWORDS（优先级：context）】</span>
+<span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span>
+
+<span style="color:#89b4fa;font-weight:600;">【供应链 SUPPLY_CHAIN（优先级：supply_chain）】</span>
+<span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span>
+
+<span style="color:#89b4fa;font-weight:600;">【组件 COMPONENTS（优先级：component）】</span>
+<span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span>g, libjpeg, ffmpeg</span>
+
+<span style="color:#89b4fa;font-weight:600;">【服务端组件 SERVER_COMPONENTS（优先级：component）】</span>
+<span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span>
+
+<span style="color:#89b4fa;font-weight:600;">【友商品牌 COMPETITOR_BRANDS（优先级：competitor）】</span>
+<span class="mosaic-inline">【出于信息安全需要，具体关键词内容不展示】</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-connector"></div>
+
+  <!-- NODE 7: 评分环节 -->
+  <div class="node-card orange" onclick="toggleCard(this)">
+    <div class="card-header">
+      <div class="step-number">7</div>
+      <div class="card-title-area">
+        <div class="card-title">评分环节 <span class="core-badge">核心决策</span></div>
+        <div class="card-file">scoring.py + vulnerability_lookup.py</div>
+        <div class="card-desc">五维统一评分 + CVSS融合 + 资产命中放大，计算最终分值</div>
+      </div>
+      <div class="expand-indicator">&#9660;</div>
+    </div>
+    <div class="card-details">
+      <div class="details-inner">
+        <div class="detail-block">
+          <h4>五维评分权重（所有类型通用）</h4>
+          <div class="weight-bar mosaic">
+            <div class="weight-segment" style="width:30%;background:#2980b9">来源可信度 30%</div>
+            <div class="weight-segment" style="width:25%;background:#27ae60">涉及组件 25%</div>
+            <div class="weight-segment" style="width:20%;background:#c0392b">影响面 20%</div>
+            <div class="weight-segment" style="width:15%;background:#f39c12">攻击可行性 15%</div>
+            <div class="weight-segment" style="width:10%;background:#e67e22">安全占比 10%</div>
+          </div>
+        </div>
+
+        <div class="detail-grid">
+          <div class="detail-block">
+            <h4>档次转数值映射</h4>
+            <table class="tier-table mosaic">
+              <tr><th>档次</th><th>对应数值</th></tr>
+              <tr><td>高 / 核心</td><td><span class="mosaic-inline">***</span></td></tr>
+              <tr><td>较高</td><td><span class="mosaic-inline">***</span></td></tr>
+              <tr><td>中 / 普通</td><td><span class="mosaic-inline">***</span></td></tr>
+              <tr><td>较低</td><td><span class="mosaic-inline">***</span></td></tr>
+              <tr><td>低</td><td><span class="mosaic-inline">***</span></td></tr>
+              <tr><td>无 / unknown</td><td>0</td></tr>
+            </table>
+          </div>
+          <div class="detail-block">
+            <h4>资产命中兜底</h4>
+            <ul>
+              <li>命中某新能源车企核心（品牌/车型）→ 相关性保底 90，组件保底 90</li>
+              <li>命中供应链 → 相关性保底 70，组件保底 60</li>
+              <li>命中车端组件 → 相关性保底 55，组件保底 55</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="formula-box mosaic">
+          <strong>最终分计算公式：</strong><br>
+          <code>final_score</code> = round(min(<br>
+          &nbsp;&nbsp;<code>impact_severity</code> × <span class="mosaic-inline">0.20</span> +<br>
+          &nbsp;&nbsp;<code>security_relevance</code> × <span class="mosaic-inline">0.10</span> +<br>
+          &nbsp;&nbsp;<code>attack_feasibility</code> × <span class="mosaic-inline">0.15</span> +<br>
+          &nbsp;&nbsp;<code>component_score</code> × <span class="mosaic-inline">0.25</span> +<br>
+          &nbsp;&nbsp;<code>source_credibility</code> × <span class="mosaic-inline">0.30</span><br>
+          , 100), 1)
+        </div>
+
+        <div class="detail-block" style="margin-top:16px; background:var(--red-bg); border:1px solid var(--red-border); border-radius:10px; padding:14px;">
+          <h4 style="color:var(--red);margin-bottom:8px;">🔴 漏洞类额外处理：CVE提取 + CVSS查询</h4>
+          <div style="font-size:0.85rem;color:var(--text);line-height:1.8;">
+            1. <strong>CVE提取：</strong>从大模型结果中提取 CVE 编号，合并 normalize 阶段兜底提取的 <code>preliminary_cves</code><br>
+            2. <strong>NVD反查：</strong>精准查询 NVD API 2.0（<code>cveId</code>参数），获取 CVSS v3.1/v3.0/v2.0 评分、严重等级、向量字符串、受影响CPE<br>
+            3. <strong>CVSS融合：</strong>仅向上融合，不压低大模型评分。若 NVD CVSS 高于大模型风险分，向上拉 <span class="mosaic-inline">40%</span> 差距<br>
+            4. <strong>有CVE加分：</strong>来源可信度保底 ≥ 75 分
+          </div>
+        </div>
+
+        <div class="detail-block" style="margin-top:12px; background:var(--green-bg); border:1px solid var(--green-border); border-radius:10px; padding:14px;">
+          <h4 style="color:var(--green);margin-bottom:8px;">🎯 资产命中温和放大</h4>
+          <div style="font-size:0.85rem;color:var(--text);line-height:1.8;">
+            • <strong>某新能源车企核心命中</strong>（品牌/车型）：影响面 & 攻击可行性 × <span class="mosaic-inline">1.15</span><br>
+            • <strong>供应链命中</strong>：影响面 & 攻击可行性 × <span class="mosaic-inline">1.105</span><br>
+            • <strong>车端组件命中</strong>：影响面 & 攻击可行性 × <span class="mosaic-inline">1.075</span>
+          </div>
+        </div>
+
+        <div class="decision-box mosaic" style="margin-top:16px">
+          <h4>决策输出</h4>
+          <div class="rule-item">
+            <span class="rule-label">should_notify（是否推送企微）：</span><br>
+            <code>classification_confidence ≥ <span class="mosaic-inline">0.6</span></code> 且 <code>confidence ≥ <span class="mosaic-inline">0.7</span></code> 且 <code>final_score ≥ <span class="mosaic-inline">50</span></code><br>
+            漏洞类还需命中核心资产或组件；舆情类还需负面情感
+          </div>
+          <div class="rule-item">
+            <span class="rule-label">should_write_opencti（是否入库）：</span><br>
+            漏洞/安全资讯 → 是；舆情+某新能源车企核心+score ≥ <span class="mosaic-inline">30</span> → 是；irrelevant → 否
+          </div>
+          <div class="rule-item">
+            <span class="rule-label">priority（优先级）：</span>默认"待定级"，由人工P1-P4打标，机器不产出
+          </div>
+        </div>
+
+        <button class="section-toggle" onclick="toggleSection(event, this)">
+          查看完整评分规则与决策逻辑 <span style="font-size:0.75rem;color:var(--orange);margin-left:8px;">【出于信息安全需要，具体评分标准已脱敏】</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="section-content">
+          <div class="security-note">【出于信息安全需要，具体关键词内容不展示】</div>
+          <div class="code-block mosaic"><span style="color:#89b4fa;font-weight:600;">【irrelevant 直接返回】</span>
+<span style="color:#cdd6f4;">if content_type == "irrelevant":
+    final_score = 0
+    priority = "待定级"
+    should_notify = False
+    should_write_opencti = False
+    return</span>
+
+<span style="color:#89b4fa;font-weight:600;">【资产命中分级兜底（相关性+组件分）】</span>
+<span style="color:#cdd6f4;">命中某新能源车企核心（品牌/车型）:
+    relevance = max(relevance, 90)
+    component = max(component, 90)
+命中供应链:
+    relevance = max(relevance, 70)
+    component = max(component, 60)
+命中车端组件:
+    relevance = max(relevance, 55)
+    component = max(component, 55)</span>
+
+<span style="color:#89b4fa;font-weight:600;">【CVSS 仅向上融合】</span>
+<span style="color:#cdd6f4;">cvss_signal = min(max_cvss * 10.0, 100.0)  # NVD CVSS 0-10 → 0-100
+if max_cvss > 0 and cvss_signal > risk:
+    risk = risk + (cvss_signal - risk) * 0.4  # 仅向上拉 <span class="mosaic-inline">40%</span>差距</span>
+
+<span style="color:#89b4fa;font-weight:600;">【资产命中温和放大】</span>
+<span style="color:#cdd6f4;">某新能源车企核心: asset_factor = 1.0 → impact/attack × <span class="mosaic-inline">1.15</span>
+供应链:   asset_factor = 0.7 → impact/attack × <span class="mosaic-inline">1.105</span>
+车端组件: asset_factor = 0.5 → impact/attack × <span class="mosaic-inline">1.075</span>
+无命中:   asset_factor = 0.0 → 不放大</span>
+
+<span style="color:#89b4fa;font-weight:600;">【有CVE编号 → 来源可信度提高】</span>
+<span style="color:#cdd6f4;">if has_cve:
+    source_cred = max(source_cred, 75.0)</span>
+
+<span style="color:#89b4fa;font-weight:600;">【推送决策细则】</span>
+<span style="color:#cdd6f4;">should_notify = (
+    classification_confidence >= <span class="mosaic-inline">0.6</span>
+    and confidence >= <span class="mosaic-inline">0.7</span>
+    and final_score >= <span class="mosaic-inline">50</span>
+)
+if content_type == "vulnerability":
+    should_notify = should_notify and (has_core or has_supply_or_component)
+elif content_type == "public_opinion":
+    is_negative = opinion.sentiment == "negative"
+    should_notify = should_notify and has_core and is_negative
+elif content_type in ("data_leak", "regulatory"):
+    pass  # final_score >= <span class="mosaic-inline">50</span> 已包含</span>
+
+<span style="color:#89b4fa;font-weight:600;">【OpenCTI 入库决策】</span>
+<span style="color:#cdd6f4;">if content_type in ("vulnerability", "data_leak", "regulatory"):
+    should_write_opencti = True
+elif content_type == "public_opinion":
+    should_write_opencti = has_core and final_score >= <span class="mosaic-inline">30</span>
+else:
+    should_write_opencti = False</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-connector"></div>
+
+  <!-- NODE 8: 输出 -->
+  <div class="node-card orange" onclick="toggleCard(this)">
+    <div class="card-header">
+      <div class="step-number">8</div>
+      <div class="card-title-area">
+        <div class="card-title">输出 <span class="core-badge">OpenCTI + 企微</span></div>
+        <div class="card-file">opencti_writer.py + alert_correlation.py</div>
+        <div class="card-desc">生成结构化输出，入库OpenCTI，关联历史情报，触发企微推送</div>
+      </div>
+      <div class="expand-indicator">&#9660;</div>
+    </div>
+    <div class="card-details">
+      <div class="details-inner">
+        <div class="detail-block">
+          <h4>输出 JSON 结构</h4>
+          <div class="code-block"><span class="json-bracket">{</span>
+  <span class="json-comment">// 基础信息</span>
+  <span class="json-key">"title"</span>:              <span class="json-string">"情报标题"</span>,
+  <span class="json-key">"content_type"</span>:       <span class="json-string">"vulnerability | data_leak | regulatory | public_opinion"</span>,
+  <span class="json-key">"source_platform"</span>:    <span class="json-string">"douyin | weibo | xiaohongshu | rss | security_forum | nvd | other | null"</span>,
+  <span class="json-key">"summary"</span>:            <span class="json-string">"100字内中文摘要"</span>,
+
+  <span class="json-comment">// 分类与影响域</span>
+  <span class="json-key">"affected_ends"</span>:      <span class="json-bracket">[</span><span class="json-string">"整车"</span>, <span class="json-string">"网联平台"</span>, <span class="json-string">"控车APP"</span>, <span class="json-string">"充电桩"</span><span class="json-bracket">]</span>,
+  <span class="json-key">"involved_components"</span>: <span class="json-bracket">[</span><span class="json-string">"T-Box"</span>, <span class="json-string">"CAN Bus"</span>, <span class="json-string">"OpenSSL"</span><span class="json-bracket">]</span>,
+
+  <span class="json-comment">// 五维评分</span>
+  <span class="json-key">"impact_severity_score"</span>:     <span class="json-type">80</span>,
+  <span class="json-key">"security_relevance_score"</span>:  <span class="json-type">100</span>,
+  <span class="json-key">"attack_feasibility_score"</span>:  <span class="json-type">60</span>,
+  <span class="json-key">"component_score"</span>:           <span class="json-type">90</span>,
+  <span class="json-key">"source_credibility_score"</span>:  <span class="json-type">75</span>,
+
+  <span class="json-comment">// 漏洞类专属（仅 vulnerability 类型非null）</span>
+  <span class="json-key">"cves"</span>:               <span class="json-bracket">[</span><span class="json-string">"CVE-2024-XXXX"</span><span class="json-bracket">]</span>,
+  <span class="json-key">"cvss_score"</span>:         <span class="json-type">8.5</span>,
+  <span class="json-key">"cvss_severity"</span>:      <span class="json-string">"HIGH"</span>,
+  <span class="json-key">"affected_versions"</span>:  <span class="json-string">"受影响版本"</span>,
+  <span class="json-key">"exploit_status"</span>:     <span class="json-string">"poc_available | weaponized | in_the_wild | ..."</span>,
+
+  <span class="json-comment">// 舆情类专属（仅 public_opinion 类型非null）</span>
+  <span class="json-key">"sentiment"</span>:          <span class="json-string">"negative"</span>,
+  <span class="json-key">"sentiment_score"</span>:    <span class="json-type">-0.8</span>,
+  <span class="json-key">"topics"</span>:             <span class="json-bracket">[</span><span class="json-string">"车机黑屏"</span>, <span class="json-string">"OTA故障"</span><span class="json-bracket">]</span>,
+
+  <span class="json-comment">// 决策输出</span>
+  <span class="json-key">"final_score"</span>:        <span class="json-type">78.5</span>,
+  <span class="json-key">"should_notify"</span>:    <span class="json-type">true</span>,
+  <span class="json-key">"should_write_opencti"</span>: <span class="json-type">true</span>,
+  <span class="json-key">"workflow_status"</span>:  <span class="json-string">"IN_PROGRESS"</span>,
+  <span class="json-key">"priority"</span>:         <span class="json-string">"待定级"</span>,
+
+  <span class="json-comment">// 关联情报</span>
+  <span class="json-key">"correlated_reports"</span>: <span class="json-bracket">[</span>
+    <span class="json-bracket">{</span><span class="json-key">"report_id"</span>: <span class="json-string">"xxx"</span>, <span class="json-key">"name"</span>: <span class="json-string">"报告名"</span>, <span class="json-key">"similarity"</span>: <span class="json-type">0.85</span><span class="json-bracket">}</span>
+  <span class="json-bracket">]</span>,
+  <span class="json-key">"correlation_alert"</span>: <span class="json-string">"聚合告警：关联3条相似情报"</span>,
+
+  <span class="json-comment">// 标签</span>
+  <span class="json-key">"tags"</span>: <span class="json-bracket">[</span><span class="json-string">"某新能源车企核心"</span>, <span class="json-string">"车机/IVI"</span>, <span class="json-string">"ai-processed"</span><span class="json-bracket">]</span>,
+
+  <span class="json-comment">// 元数据</span>
+  <span class="json-key">"confidence_score"</span>: <span class="json-type">0.92</span>,
+  <span class="json-key">"evidence"</span>:         <span class="json-bracket">[</span><span class="json-string">"判定证据1"</span>, <span class="json-string">"判定证据2"</span><span class="json-bracket">]</span>,
+  <span class="json-key">"recommendations"</span>:  <span class="json-bracket">[</span><span class="json-string">"建议动作1"</span>, <span class="json-string">"建议动作2"</span><span class="json-bracket">]</span>
+<span class="json-bracket">}</span></div>
+        </div>
+
+        <div class="detail-grid" style="margin-top:16px">
+          <div class="detail-block" style="background:var(--purple-bg);border:1px solid var(--purple-border);border-radius:10px;padding:14px;">
+            <h4 style="color:var(--purple);margin-bottom:8px;">💾 OpenCTI 写入</h4>
+            <div style="font-size:0.85rem;color:var(--text);line-height:1.8;">
+              • 创建 Report + Note + ExternalReference<br>
+              • 自动标签（业务域/资产/来源/ai-processed）<br>
+              • 状态机：NEW → IN_PROGRESS → ANALYZED<br>
+              • score ≥ <span class="mosaic-inline">75</span> 自动建 Case（severity=high）<br>
+              • score ≥ <span class="mosaic-inline">90</span> 紧急 Case（severity=critical）<br>
+              • 重复情报 → 追加模式（不新建Report）
+            </div>
+          </div>
+          <div class="detail-block" style="background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:10px;padding:14px;">
+            <h4 style="color:var(--blue);margin-bottom:8px;">🔗 情报关联</h4>
+            <div style="font-size:0.85rem;color:var(--text);line-height:1.8;">
+              • TF-IDF + 余弦相似度计算<br>
+              • 阈值 0.65，返回 Top 5 相似报告<br>
+              • 关联≥3条 → 强制推送（聚合告警）<br>
+              • 相似度≥0.8 → 高相似标注<br>
+              • 创建 related-to 关系
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-block" style="margin-top:16px">
+          <h4>报告状态机（OpenCTI v7 workflow）</h4>
+          <table class="tier-table">
+            <tr><th>状态</th><th>触发条件</th><th>含义</th></tr>
+            <tr><td>CLOSED</td><td>irrelevant 噪音情报</td><td>已关闭，无需处理</td></tr>
+            <tr><td>NEW</td><td>final_score &lt; 50</td><td>新建，排队待审</td></tr>
+            <tr><td>IN_PROGRESS</td><td>50 ≤ final_score &lt; 75</td><td>处理中，待人工审核</td></tr>
+            <tr><td>ANALYZED</td><td>final_score ≥ <span class="mosaic-inline">75</span>（非舆情类）</td><td>已分析，可进入处置</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /pipeline-flow -->
+</div><!-- /pipeline-container -->
+
+<div class="principle-bar">
+  <span>🎯 类型互斥</span>
+  <span>🛡️ 噪音前置过滤</span>
+  <span>📊 五维统一评分</span>
+  <span>🔗 关联增强决策</span>
+  <span>📝 结构化输出</span>
+</div>
+
+<div class="footer">
+  车联网威胁情报平台 V2 管线文档 &mdash; 某新能源车企 信息安全部
+</div>
+
+<script>
+function toggleCard(card) {
+  card.classList.toggle('expanded');
+}
+
+function toggleSection(event, btn) {
+  event.stopPropagation();
+  btn.classList.toggle('active');
+  const content = btn.nextElementSibling;
+  content.classList.toggle('open');
+}
+
+document.getElementById('themeBtn').addEventListener('click', function() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+});
+
+document.getElementById('expandAllBtn').addEventListener('click', function() {
+  document.querySelectorAll('.node-card').forEach(function(card) {
+    card.classList.add('expanded');
+  });
+});
+
+document.getElementById('collapseAllBtn').addEventListener('click', function() {
+  document.querySelectorAll('.node-card').forEach(function(card) {
+    card.classList.remove('expanded');
+  });
+  document.querySelectorAll('.section-content').forEach(function(s) {
+    s.classList.remove('open');
+  });
+  document.querySelectorAll('.section-toggle').forEach(function(b) {
+    b.classList.remove('active');
+  });
+});
+
+if (localStorage.getItem('darkMode') === 'true') {
+  document.body.classList.add('dark');
+}
+</script>
+
+</body>
+</html>
